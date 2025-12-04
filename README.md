@@ -70,9 +70,18 @@ docker-compose up --build
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
-cd src
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Run the application (from repo root)
+python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+## ✅ Testing
+
+Quick end-to-end test script (health, stats, Q&A):
+
+```bash
+./scripts/test_e2e.sh http://localhost:8000
+```
+
+Detailed results and commands are in `TEST_REPORT.md`.
 ```
 
 ## 📡 API Usage

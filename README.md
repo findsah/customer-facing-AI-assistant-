@@ -70,6 +70,10 @@ docker-compose up --build
 # Install dependencies
 pip install -r requirements.txt
 
+# Optional: configure environment
+cp .env.example .env
+# Then tweak variables in .env as needed
+
 # Run the application (from repo root)
 python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -128,6 +132,12 @@ SCRAPE_URL=https://ziggo.nl/internet          # Target URL
 DATA_DIR=./data                                 # Persistent storage
 LOG_LEVEL=INFO                                  # Logging level
 API_PORT=8000                                   # FastAPI port
+```
+
+Create your local file from the template:
+
+```bash
+cp .env.example .env
 ```
 
 ### Docker Compose Customization

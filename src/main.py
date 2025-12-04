@@ -23,9 +23,17 @@ from scraper import VodafoneZiggoScraper
 from embedding_store import VectorStore
 from rag_assistant import RAGAssistant
 
-# Configure logging
+# Configure logging from env LOG_LEVEL
+_LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+_LEVEL_MAP = {
+    "CRITICAL": logging.CRITICAL,
+    "ERROR": logging.ERROR,
+    "WARNING": logging.WARNING,
+    "INFO": logging.INFO,
+    "DEBUG": logging.DEBUG,
+}
 logging.basicConfig(
-    level=logging.INFO,
+    level=_LEVEL_MAP.get(_LOG_LEVEL, logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -64,6 +72,12 @@ class AnswerResponse(BaseModel):
     answer: str
     sources: list
     success: bool
+
+
+class RebuildRequest(BaseModel):
+    """Request model for rebuilding the vector store."""
+
+    url: str | None = None
 
 
 @app.on_event("startup")
@@ -116,6 +130,53 @@ async def startup_event():
     assistant = RAGAssistant(vector_store, use_local_llm=False)
 
     logger.info("AI Assistant startup complete")
+
+
+@app.post("/api/rebuild")
+async def rebuild_index(payload: RebuildRequest) -> Dict:
+    """Re-scrape content and rebuild the vector store.
+
+    Optional body: {"url": "https://example.com/page"}
+    If no URL provided, falls back to env SCRAPE_URL or the default.
+    """
+    global vector_store
+
+    if vector_store is None:
+        raise HTTPException(status_code=500, detail="Vector store not initialized")
+
+    url = payload.url or os.getenv("SCRAPE_URL", "https://ziggo.nl/internet")
+    logger.info(f"Rebuilding index from {url} ...")
+
+    try:
+        scraper = VodafoneZiggoScraper(url)
+        content = scraper.scrape()
+        if not content:
+            logger.warning("Scrape returned no content; using sample data.")
+            content = (
+                "VodafoneZiggo Internet Services\n\n"
+                "Our internet services offer high-speed connectivity for homes and businesses.\n"
+                "We provide various packages tailored to your needs.\n\n"
+                "Fiber Optic Internet: Experience ultra-fast speeds up to 1000 Mbps with our fiber network.\n"
+                "Cable Internet: Reliable and fast internet through our extensive cable infrastructure.\n"
+                "5G Mobile: Stay connected with our latest 5G technology for mobile users.\n\n"
+                "Customer Support: Available 24/7 via phone, chat, and email.\n"
+                "Installation: Professional installation available in most areas.\n"
+                "Router: Premium routers included with our service plans.\n"
+            )
+
+        ok = vector_store.create_vector_store_from_text(content)
+        if not ok:
+            raise RuntimeError("Failed to rebuild vector store")
+
+        # Re-load ensures collection handle and embedding refit
+        vector_store.load_vector_store()
+
+        stats = vector_store.get_store_stats()
+        return {"status": "rebuilt", "url": url, "stats": stats}
+
+    except Exception as e:
+        logger.error(f"Rebuild failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Rebuild failed: {e}")
 
 
 @app.get("/api/health")

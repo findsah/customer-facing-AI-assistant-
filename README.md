@@ -2,6 +2,32 @@
 
 A production-ready prototype of an AI-powered customer support assistant that scrapes website content, embeds it in a vector store, and provides intelligent question-answering through a REST API.
 
+## 🎯 Reviewer Quick Start
+
+Run locally in 2 steps and test:
+
+```bash
+cd /home/syedalihassan03/technical-test
+cp .env.example .env   # optional; tweak values if desired
+./scripts/run_local.sh # starts on port from .env (default 8000)
+```
+
+In another terminal:
+
+```bash
+./scripts/test_e2e.sh http://localhost:${API_PORT:-8000}
+```
+
+Rebuild the index any time (re-scrape or use sample fallback):
+
+```bash
+./scripts/rebuild.sh http://localhost:${API_PORT:-8000}  # use SCRAPE_URL from server
+# or override URL
+./scripts/rebuild.sh http://localhost:${API_PORT:-8000} https://ziggo.nl/internet
+```
+
+---
+
 ## 🎯 Overview
 
 This project implements an end-to-end RAG (Retrieval-Augmented Generation) system with the following flow:
@@ -110,6 +136,11 @@ curl http://localhost:8000/api/stats
 ### Interactive API Docs
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+### Maintenance Endpoints
+- Rebuild index: `POST /api/rebuild`
+  - Optional body: `{ "url": "https://example.com/page" }`
+  - Without a URL, the server uses `SCRAPE_URL` or the built-in sample content
 
 ## 📦 Key Libraries & Why They Were Chosen
 

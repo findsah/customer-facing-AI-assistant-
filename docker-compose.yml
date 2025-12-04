@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  # AI Assistant API Service
+  ai-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vodafone-ai-assistant
+    ports:
+      - "8000:8000"
+    environment:
+      # URL to scrape (example uses VodafoneZiggo internet page)
+      - SCRAPE_URL=https://ziggo.nl/internet
+      # Data directory for persistent vector store
+      - DATA_DIR=/app/data
+      # Python settings
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist vector store data between container restarts
+      - ai_data:/app/data
+      # Persist logs
+      - ai_logs:/app/logs
+    networks:
+      - ai_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    # Note: For production with GPU support, add:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  # Persist data between restarts
+  ai_data:
+    driver: local
+  ai_logs:
+    driver: local
+
+networks:
+  ai_network:
+    driver: bridge

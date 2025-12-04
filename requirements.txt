@@ -1,0 +1,22 @@
+# Core dependencies for the AI Assistant
+
+# Web scraping
+requests==2.31.0
+beautifulsoup4==4.12.2
+
+# LLM and embeddings
+langchain==0.0.340
+transformers==4.35.2
+torch==2.1.1
+sentence-transformers==2.2.2
+
+# Vector store
+chromadb==0.4.14
+
+# FastAPI web framework
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.4.2
+
+# Utilities
+python-dotenv==1.0.0

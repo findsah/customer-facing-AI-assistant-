@@ -40,7 +40,7 @@ class EmbeddingManager:
             lowercase=True,
             stop_words='english',
             min_df=1,
-            max_df=0.95
+            max_df=1.0  # Allow all documents
         )
         self.fitted = False
         logger.info("TF-IDF embedding model initialized")
@@ -56,12 +56,16 @@ class EmbeddingManager:
             List of floats representing the embedding vector
         """
         if not self.fitted:
-            # Fit on the text if not yet fitted
-            self.vectorizer.fit([text])
-            self.fitted = True
+            logger.error("Vectorizer not fitted! Must call embed_texts() first to fit vocabulary.")
+            # Return zero vector if not fitted
+            return [0.0] * 1000
         
-        embedding = self.vectorizer.transform([text]).toarray()[0]
-        return embedding.tolist()
+        try:
+            embedding = self.vectorizer.transform([text]).toarray()[0]
+            return embedding.tolist()
+        except Exception as e:
+            logger.warning(f"Error embedding text: {e}, returning zero vector")
+            return [0.0] * 1000  # Return zero vector as fallback
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
@@ -179,6 +183,21 @@ class VectorStore:
         try:
             logger.info(f"Loading vector store from {self.persist_directory}")
             self.collection = self.client.get_collection(name=self.collection_name)
+
+            # Refit the TF-IDF vectorizer using stored documents to ensure
+            # query embedding dimensionality matches the collection.
+            try:
+                existing = self.collection.get()
+                docs = existing.get("documents") or []
+                if docs:
+                    logger.info(f"Refitting vectorizer with {len(docs)} documents")
+                    self.embedding_manager.vectorizer.fit(docs)
+                    self.embedding_manager.fitted = True
+                else:
+                    logger.warning("Collection has no documents; vectorizer remains unfitted")
+            except Exception as e:
+                logger.warning(f"Could not refit vectorizer from collection: {e}")
+
             logger.info("Vector store loaded successfully")
             return True
         except Exception as e:
